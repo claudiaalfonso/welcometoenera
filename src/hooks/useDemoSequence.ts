@@ -287,6 +287,10 @@ export const useDemoSequence = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastMessageIdRef = useRef<string | null>(null);
+  
+  // Smooth text persistence refs - prevent popping between phrases
+  const lastPhraseEndTimeRef = useRef<number>(0);
+  const lastPhraseStateRef = useRef<CurrentPhraseState | null>(null);
 
   // Initialize audio
   useEffect(() => {
@@ -358,6 +362,17 @@ export const useDemoSequence = () => {
       }
 
       if (!activePhrase) {
+        // Smooth persistence: keep showing last phrase during micro-gaps (up to 800ms)
+        const gracePeriod = 0.8;
+        const timeSinceLastPhrase = currentTime - lastPhraseEndTimeRef.current;
+        
+        if (timeSinceLastPhrase < gracePeriod && lastPhraseStateRef.current) {
+          // Keep showing last phrase frozen at 100% progress - don't update state
+          rafRef.current = requestAnimationFrame(syncWithAudio);
+          return;
+        }
+        
+        // Only clear after grace period (genuine silence)
         setCurrentPhrase({
           messageId: null,
           role: null,
@@ -369,6 +384,7 @@ export const useDemoSequence = () => {
         });
         setCurrentStatus("");
         setIsProcessing(false);
+        lastPhraseStateRef.current = null;
         rafRef.current = requestAnimationFrame(syncWithAudio);
         return;
       }
@@ -387,7 +403,7 @@ export const useDemoSequence = () => {
       const elapsed = currentTime - activePhrase.startTime;
       const wordProgress = Math.min(1, Math.max(0, elapsed / estimatedDuration));
 
-      setCurrentPhrase({
+      const newPhraseState: CurrentPhraseState = {
         messageId: activePhrase.messageId,
         role: activePhrase.role,
         visiblePhrases,
@@ -395,7 +411,14 @@ export const useDemoSequence = () => {
         wordProgress,
         currentPhraseStartTime: activePhrase.startTime,
         nextPhraseStartTime: activePhrase.nextStartTime
-      });
+      };
+      
+      setCurrentPhrase(newPhraseState);
+      
+      // Track for smooth persistence
+      const estimatedEnd = activePhrase.startTime + estimateSpeechDuration(activePhrase.text, activePhrase.role);
+      lastPhraseEndTimeRef.current = estimatedEnd;
+      lastPhraseStateRef.current = newPhraseState;
 
       // Build completed messages (all messages before current)
       if (activePhrase.messageId !== lastMessageIdRef.current) {
