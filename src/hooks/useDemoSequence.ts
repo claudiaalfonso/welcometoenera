@@ -54,14 +54,14 @@ const CUE_SHEET: Cue[] = [
   { 
     id: "3", 
     speaker: "amelia", 
-    startTime: 25.6, 
-    endTime: 35.5, 
+    startTime: 25.0, 
+    endTime: 35.0, 
     chunks: [
-      { t: 25.6, text: "I'm sorry you're having trouble." },
-      { t: 27.3, text: "Let me look into that for you." },
-      { t: 29.1, text: "You're in Market Harborough." },
-      { t: 30.9, text: "Can you just confirm" },
-      { t: 32.1, text: "the charger ID is MH-102-B?" }
+      { t: 25.0, text: "I'm sorry you're having trouble." },
+      { t: 26.7, text: "Let me look into that for you." },
+      { t: 28.5, text: "You're in Market Harborough." },
+      { t: 30.3, text: "Can you just confirm" },
+      { t: 31.5, text: "the charger ID is MH-102-B?" }
     ]
   },
   { 
