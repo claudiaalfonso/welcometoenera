@@ -59,10 +59,10 @@ const SyncCalibrationOverlay = ({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          className="fixed top-4 right-4 z-50 bg-background/98 border border-border rounded-lg p-4 shadow-xl backdrop-blur-sm font-mono text-xs max-w-md"
+          exit={{ opacity: 0, x: -20 }}
+          className="fixed bottom-4 left-4 z-50 bg-background/90 border border-border rounded-lg p-3 shadow-xl backdrop-blur-sm font-mono text-xs max-w-sm"
         >
           {/* Header */}
           <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
