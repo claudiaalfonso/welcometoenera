@@ -95,27 +95,26 @@ export interface SequenceAction {
   messageIndex: number | null;
   statusIndex: number;
   stepUpdates: { id: string; status: "active" | "completed" }[];
-  delay: number;
-  audioTime: number;
+  audioTime: number; // When this step should trigger (in seconds)
 }
 
+// Audio-synced sequence - UI updates trigger when audio reaches these timestamps
+// Adjust these times to match exact moments in your recording
 const SEQUENCE: SequenceAction[] = [
-  { messageIndex: null, statusIndex: 1, stepUpdates: [{ id: "1", status: "active" }], delay: 1500, audioTime: 0 },
-  { messageIndex: 0, statusIndex: 2, stepUpdates: [{ id: "1", status: "completed" }, { id: "2", status: "active" }], delay: 2500, audioTime: 11 },
-  { messageIndex: 1, statusIndex: 3, stepUpdates: [{ id: "2", status: "completed" }], delay: 2000, audioTime: 25 },
-  { messageIndex: 2, statusIndex: 4, stepUpdates: [{ id: "3", status: "active" }], delay: 1500, audioTime: 34 },
-  { messageIndex: 3, statusIndex: 5, stepUpdates: [{ id: "3", status: "completed" }, { id: "4", status: "active" }], delay: 3500, audioTime: 39 },
-  { messageIndex: null, statusIndex: 6, stepUpdates: [{ id: "4", status: "completed" }, { id: "5", status: "active" }], delay: 1500, audioTime: 50 },
-  { messageIndex: 4, statusIndex: 7, stepUpdates: [], delay: 1500, audioTime: 58 },
-  { messageIndex: null, statusIndex: 8, stepUpdates: [], delay: 2500, audioTime: 61 },
-  { messageIndex: 5, statusIndex: 9, stepUpdates: [{ id: "5", status: "completed" }, { id: "6", status: "active" }], delay: 3500, audioTime: 63 },
-  { messageIndex: 6, statusIndex: 9, stepUpdates: [{ id: "6", status: "completed" }], delay: 2000, audioTime: 78 },
-  { messageIndex: 7, statusIndex: 10, stepUpdates: [{ id: "7", status: "active" }], delay: 3000, audioTime: 86 },
-  { messageIndex: null, statusIndex: 10, stepUpdates: [{ id: "7", status: "completed" }], delay: 1000, audioTime: 93 },
-  { messageIndex: 8, statusIndex: 11, stepUpdates: [{ id: "8", status: "active" }], delay: 2500, audioTime: 98 },
-  { messageIndex: 9, statusIndex: 11, stepUpdates: [{ id: "8", status: "completed" }], delay: 2000, audioTime: 109 },
-  { messageIndex: 10, statusIndex: 11, stepUpdates: [], delay: 1500, audioTime: 117 },
-  { messageIndex: 11, statusIndex: 11, stepUpdates: [], delay: 1500, audioTime: 123 }
+  { messageIndex: null, statusIndex: 1, stepUpdates: [{ id: "1", status: "active" }], audioTime: 0.5 },
+  { messageIndex: 0, statusIndex: 2, stepUpdates: [{ id: "1", status: "completed" }, { id: "2", status: "active" }], audioTime: 1 },
+  { messageIndex: 1, statusIndex: 3, stepUpdates: [{ id: "2", status: "completed" }], audioTime: 12 },
+  { messageIndex: 2, statusIndex: 4, stepUpdates: [{ id: "3", status: "active" }], audioTime: 21 },
+  { messageIndex: 3, statusIndex: 5, stepUpdates: [{ id: "3", status: "completed" }, { id: "4", status: "active" }], audioTime: 24 },
+  { messageIndex: null, statusIndex: 6, stepUpdates: [{ id: "4", status: "completed" }, { id: "5", status: "active" }], audioTime: 42 },
+  { messageIndex: 4, statusIndex: 7, stepUpdates: [], audioTime: 48 },
+  { messageIndex: 5, statusIndex: 9, stepUpdates: [{ id: "5", status: "completed" }, { id: "6", status: "active" }], audioTime: 51 },
+  { messageIndex: 6, statusIndex: 9, stepUpdates: [{ id: "6", status: "completed" }], audioTime: 66 },
+  { messageIndex: 7, statusIndex: 10, stepUpdates: [{ id: "7", status: "active" }], audioTime: 72 },
+  { messageIndex: 8, statusIndex: 11, stepUpdates: [{ id: "7", status: "completed" }, { id: "8", status: "active" }], audioTime: 87 },
+  { messageIndex: 9, statusIndex: 11, stepUpdates: [{ id: "8", status: "completed" }], audioTime: 97 },
+  { messageIndex: 10, statusIndex: 11, stepUpdates: [], audioTime: 107 },
+  { messageIndex: 11, statusIndex: 11, stepUpdates: [], audioTime: 110 }
 ];
 
 export type PlayMode = "auto" | "manual";
@@ -133,23 +132,39 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
   const [hasStarted, setHasStarted] = useState(false);
   
   const sequenceIndexRef = useRef(-1);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Initialize audio - ensure it's loud and foreground
+  // Initialize audio
   useEffect(() => {
     audioRef.current = new Audio("/audio/demo-conversation.m4a");
     audioRef.current.preload = "auto";
-    audioRef.current.volume = 1.0; // Full volume
+    audioRef.current.volume = 1.0;
+    
+    // Handle audio end
+    const handleEnded = () => {
+      setIsComplete(true);
+      setShowConfirmation(true);
+      setIsProcessing(false);
+      setIsPlaying(false);
+    };
+    
+    audioRef.current.addEventListener("ended", handleEnded);
+    
     return () => {
       if (audioRef.current) {
+        audioRef.current.removeEventListener("ended", handleEnded);
         audioRef.current.pause();
         audioRef.current = null;
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
       }
     };
   }, []);
 
-  const applyStep = useCallback((idx: number) => {
+  // Apply a specific step's state
+  const applyStepState = useCallback((idx: number) => {
     if (idx < 0 || idx >= SEQUENCE.length) return;
     
     const action = SEQUENCE[idx];
@@ -181,13 +196,51 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
     
     sequenceIndexRef.current = idx;
     setCurrentStepIndex(idx);
+  }, []);
 
-    // Sync audio
-    if (audioRef.current && isPlaying) {
-      audioRef.current.currentTime = action.audioTime;
-      audioRef.current.play().catch(() => {});
-    }
-  }, [isPlaying]);
+  // Audio-driven sync loop - checks audio time and advances sequence
+  useEffect(() => {
+    if (!hasStarted || !isPlaying || isComplete || playMode !== "auto") return;
+
+    const syncWithAudio = () => {
+      if (!audioRef.current) return;
+      
+      const currentTime = audioRef.current.currentTime;
+      const currentIdx = sequenceIndexRef.current;
+      
+      // Find which step we should be on based on audio time
+      let targetIdx = -1;
+      for (let i = SEQUENCE.length - 1; i >= 0; i--) {
+        if (currentTime >= SEQUENCE[i].audioTime) {
+          targetIdx = i;
+          break;
+        }
+      }
+      
+      // Advance if we're behind
+      if (targetIdx > currentIdx) {
+        applyStepState(targetIdx);
+      }
+      
+      // Check for completion
+      if (currentTime >= SEQUENCE[SEQUENCE.length - 1].audioTime + 5) {
+        setIsComplete(true);
+        setShowConfirmation(true);
+        setIsProcessing(false);
+        return;
+      }
+      
+      rafRef.current = requestAnimationFrame(syncWithAudio);
+    };
+    
+    rafRef.current = requestAnimationFrame(syncWithAudio);
+    
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [hasStarted, isPlaying, isComplete, playMode, applyStepState]);
 
   const goToNext = useCallback(() => {
     const nextIdx = sequenceIndexRef.current + 1;
@@ -199,20 +252,27 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
       if (audioRef.current) audioRef.current.pause();
       return;
     }
-    applyStep(nextIdx);
-  }, [applyStep]);
+    applyStepState(nextIdx);
+    // Sync audio to this step
+    if (audioRef.current) {
+      audioRef.current.currentTime = SEQUENCE[nextIdx].audioTime;
+    }
+  }, [applyStepState]);
 
   const goToPrevious = useCallback(() => {
     if (sequenceIndexRef.current <= 0) return;
     const prevIdx = sequenceIndexRef.current - 1;
     setIsComplete(false);
     setShowConfirmation(false);
-    applyStep(prevIdx);
-  }, [applyStep]);
+    applyStepState(prevIdx);
+    // Sync audio to this step
+    if (audioRef.current) {
+      audioRef.current.currentTime = SEQUENCE[prevIdx].audioTime;
+    }
+  }, [applyStepState]);
 
   const togglePlayPause = useCallback(() => {
     if (isComplete) {
-      // Restart
       reset();
       return;
     }
@@ -231,8 +291,8 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
   }, [isComplete]);
 
   const reset = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
     }
     if (audioRef.current) {
       audioRef.current.pause();
@@ -255,10 +315,11 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
     if (mode === "manual") {
       setIsPlaying(false);
       if (audioRef.current) audioRef.current.pause();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     }
   }, []);
 
-  // Start demo function - called when user clicks Start Demo
+  // Start demo - called when user clicks Start
   const startDemo = useCallback(() => {
     setHasStarted(true);
     setIsPlaying(true);
@@ -267,28 +328,6 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
       audioRef.current.play().catch(() => {});
     }
   }, []);
-
-  // Auto-play logic
-  useEffect(() => {
-    if (!hasStarted || playMode !== "auto" || !isPlaying || isComplete) return;
-
-    const scheduleNext = () => {
-      const currentIdx = sequenceIndexRef.current;
-      const delay = currentIdx < 0 ? 1200 : SEQUENCE[currentIdx]?.delay || 2000;
-      
-      timerRef.current = setTimeout(() => {
-        goToNext();
-      }, delay);
-    };
-    
-    scheduleNext();
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [hasStarted, playMode, isPlaying, isComplete, currentStepIndex, goToNext]);
 
   return {
     messages,
