@@ -21,9 +21,9 @@ const TIMED_TRANSCRIPT: TimedMessage[] = [
     id: "1",
     role: "amelia",
     phrases: [
-      { text: "Hello, my name is Amelia,", startTime: 3.0 },
-      { text: "and I'm with Enera Support.", startTime: 5.2 },
-      { text: "How can I help you today?", startTime: 7.5 },
+      { text: "Hello, my name is Amelia,", startTime: 4.5 },
+      { text: "and I'm with Enera Support.", startTime: 6.5 },
+      { text: "How can I help you today?", startTime: 8.5 },
     ]
   },
   {
@@ -292,8 +292,8 @@ export const useDemoSequence = (initialMode: PlayMode = "auto") => {
       
       const currentTime = audioRef.current.currentTime;
       
-      // RULE: Before first speech (< 3s), show NOTHING
-      if (currentTime < 3) {
+      // RULE: Before first speech (< 4.5s), show NOTHING (background noise)
+      if (currentTime < 4.5) {
         setCurrentPhrase({
           messageId: null,
           role: null,
