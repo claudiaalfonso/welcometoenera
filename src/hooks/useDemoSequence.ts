@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Message } from "@/components/demo/ChatMessage";
 import { TimelineStep } from "@/components/demo/TimelineItem";
+import { getGlobalOffset, getEffectiveTime } from "./useGlobalOffset";
 
 // ============================================================
 // DETERMINISTIC CUE SHEET - Audio timestamps are the ONLY truth
@@ -19,14 +20,6 @@ export interface Cue {
   endTime: number;
   chunks: PhraseChunk[];
 }
-
-// Master global offset - adjustable via D-toggle calibration
-let GLOBAL_OFFSET = 0;
-
-export const getGlobalOffset = () => GLOBAL_OFFSET;
-export const setGlobalOffset = (offset: number) => {
-  GLOBAL_OFFSET = offset;
-};
 
 // CUE SHEET with phrase chunks (2-7 words each)
 // Each chunk has its own timestamp for progressive reveal
@@ -334,7 +327,8 @@ export const useDemoSequence = () => {
       if (!audioRef.current) return;
 
       const rawTime = audioRef.current.currentTime;
-      const currentTime = rawTime + GLOBAL_OFFSET;
+      // Use centralized effective time calculation
+      const currentTime = getEffectiveTime(rawTime);
       setAudioCurrentTime(rawTime);
 
       // Find active cue
@@ -479,11 +473,13 @@ export const useDemoSequence = () => {
 
   const goToNext = useCallback(() => {
     if (!audioRef.current) return;
-    const currentTime = audioRef.current.currentTime + GLOBAL_OFFSET;
+    const rawTime = audioRef.current.currentTime;
+    const currentTime = getEffectiveTime(rawTime);
+    const offset = getGlobalOffset();
 
     for (const cue of CUE_SHEET) {
       if (cue.startTime > currentTime + 0.5) {
-        audioRef.current.currentTime = cue.startTime - GLOBAL_OFFSET;
+        audioRef.current.currentTime = cue.startTime - offset;
         return;
       }
     }
@@ -497,7 +493,9 @@ export const useDemoSequence = () => {
 
   const goToPrevious = useCallback(() => {
     if (!audioRef.current) return;
-    const currentTime = audioRef.current.currentTime + GLOBAL_OFFSET;
+    const rawTime = audioRef.current.currentTime;
+    const currentTime = getEffectiveTime(rawTime);
+    const offset = getGlobalOffset();
 
     let prevTime = 0;
     for (const cue of CUE_SHEET) {
@@ -508,7 +506,7 @@ export const useDemoSequence = () => {
       }
     }
 
-    audioRef.current.currentTime = prevTime - GLOBAL_OFFSET;
+    audioRef.current.currentTime = prevTime - offset;
     setIsComplete(false);
     setShowConfirmation(false);
   }, []);
