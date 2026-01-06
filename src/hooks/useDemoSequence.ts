@@ -78,20 +78,20 @@ const CUE_SHEET: Cue[] = [
   { 
     id: "5", 
     speaker: "amelia", 
-    startTime: 41.5, 
-    endTime: 61.0, 
+    startTime: 39.3, 
+    endTime: 58.8, 
     chunks: [
-      { t: 41.5, text: "Perfect, thanks." },
-      { t: 42.8, text: "Let me just look into" },
-      { t: 44.0, text: "what's happening there." },
-      { t: 46.0, text: "I've just run a diagnostic," },
-      { t: 48.0, text: "and it looks like the card reader module" },
-      { t: 50.2, text: "is frozen," },
-      { t: 51.0, text: "although the charger itself is healthy." },
-      { t: 53.5, text: "I'm going to trigger" },
-      { t: 54.8, text: "a remote reset on the reader for you now." },
-      { t: 57.0, text: "It should take about 45 seconds" },
-      { t: 59.0, text: "to reboot and come back online." }
+      { t: 39.3, text: "Perfect, thanks." },
+      { t: 40.6, text: "Let me just look into" },
+      { t: 41.8, text: "what's happening there." },
+      { t: 43.8, text: "I've just run a diagnostic," },
+      { t: 45.8, text: "and it looks like the card reader module" },
+      { t: 48.0, text: "is frozen," },
+      { t: 48.8, text: "although the charger itself is healthy." },
+      { t: 51.3, text: "I'm going to trigger" },
+      { t: 52.6, text: "a remote reset on the reader for you now." },
+      { t: 54.8, text: "It should take about 45 seconds" },
+      { t: 56.8, text: "to reboot and come back online." }
     ]
   },
   { 
