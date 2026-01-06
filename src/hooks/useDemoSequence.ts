@@ -67,11 +67,11 @@ const CUE_SHEET: Cue[] = [
   { 
     id: "4", 
     speaker: "driver", 
-    startTime: 37.0, 
-    endTime: 40.5, 
+    startTime: 34.8, 
+    endTime: 38.3, 
     chunks: [
-      { t: 37.0, text: "Yeah, that's the one." },
-      { t: 38.5, text: "MH-102-B." }
+      { t: 34.8, text: "Yeah, that's the one." },
+      { t: 36.3, text: "MH-102-B." }
     ]
   },
   { 
